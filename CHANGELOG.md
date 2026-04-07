@@ -1,3 +1,5 @@
-## 1.0.0
+## 1.0.1
+- Use staging CDN cdn.consents.dev for testing
 
-* Initial release of Seers CMP Flutter SDK.
+## 1.0.0
+- Initial release

@@ -78,7 +78,7 @@ class SeersBlockList {
 // ─────────────────────────────────────────────────────────────
 
 class SeersCMP {
-  static final SeersCMP _instance = SeersCMP._();
+  
   SeersCMP._();
 
   static String? _settingsId;
@@ -182,7 +182,7 @@ class SeersCMP {
 
   static Future<Map<String, dynamic>?> _fetchConfig(String sdkKey) async {
     final urls = [
-      'https://cdn.seersco.com/mobile/configs/$sdkKey.json',
+      'https://cdn.consents.dev/mobile/configs/$sdkKey.json',
       '${_config?['cx_host'] ?? ''}/api/mobile/sdk/config/$sdkKey',
     ];
     for (final url in urls) {
@@ -451,13 +451,13 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
         title: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _bodyColor)),
         trailing: alwaysActive
             ? Text('Always Active', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _agreeColor))
-            : Switch(value: value, onChanged: onChanged, activeColor: _agreeColor),
+            : Switch(value: value, onChanged: onChanged, activeTrackColor: _agreeColor, activeThumbColor: Colors.white),
         dense: true,
       ),
       if (isExpanded)
         Padding(
           padding: const EdgeInsets.fromLTRB(56, 0, 16, 8),
-          child: Text(_descFor(key), style: TextStyle(fontSize: 11, color: _bodyColor.withOpacity(0.7))),
+          child: Text(_descFor(key), style: TextStyle(fontSize: 11, color: _bodyColor.withValues(alpha: 0.7))),
         ),
       const Divider(height: 1, indent: 16),
     ]);
