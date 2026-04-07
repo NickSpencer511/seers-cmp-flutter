@@ -150,7 +150,7 @@ class SeersCMP {
     final prefs = await SharedPreferences.getInstance();
     final raw   = prefs.getString('SeersConsent_$_settingsId');
     if (raw == null) return null;
-    try { return SeersConsent.fromJson(jsonDecode(raw)); } catch { return null; }
+    try { return SeersConsent.fromJson(jsonDecode(raw)); } catch (e) { return null; }
   }
 
   /// Save consent after user makes a choice.
@@ -269,7 +269,7 @@ class SeersCMP {
   }
 
   static bool _isExpired(SeersConsent consent) {
-    try { return DateTime.now().isAfter(DateTime.parse(consent.expiry)); } catch { return true; }
+    try { return DateTime.now().isAfter(DateTime.parse(consent.expiry)); } catch (e) { return true; }
   }
 
   static Future<void> _logConsent(String sdkKey, SeersConsent consent) async {
