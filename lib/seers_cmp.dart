@@ -183,21 +183,27 @@ class SeersCMP {
   static Future<Map<String, dynamic>?> _fetchConfig(String sdkKey) async {
     final urls = [
       'https://cdn.consents.dev/mobile/configs/$sdkKey.json',
-      '${_config?['cx_host'] ?? ''}/api/mobile/sdk/config/$sdkKey',
     ];
     for (final url in urls) {
       try {
-        final r = await http.get(Uri.parse(url));
-        if (r.statusCode == 200) return jsonDecode(r.body);
+        final r = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+        if (r.statusCode == 200) {
+          final decoded = jsonDecode(r.body);
+          if (decoded is Map<String, dynamic>) return decoded;
+        }
       } catch (_) {}
     }
     return null;
   }
 
   static Future<Map<String, dynamic>?> _checkRegion(String sdkKey) async {
-    final host = _config?['cx_host'] ?? '';
+    final host = _config?['cx_host'];
+    if (host == null || host.toString().isEmpty) {
+      return {'regulation': 'gdpr', 'eligible': true};
+    }
     try {
-      final r = await http.get(Uri.parse('$host/api/mobile/sdk/$sdkKey'));
+      final r = await http.get(Uri.parse('$host/api/mobile/sdk/$sdkKey'))
+          .timeout(const Duration(seconds: 10));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     return {'regulation': 'gdpr', 'eligible': true};
@@ -263,9 +269,19 @@ class SeersCMP {
 
   static Map<String, dynamic>? _resolveLanguage(Map<String, dynamic> config, Map<String, dynamic>? region) {
     if (config['language'] != null) return config['language'];
-    final code = region?['data']?['country_iso_code'] ?? config['dialogue']?['default_language'] ?? 'GB';
     final langs = config['languages'] as List?;
-    return langs?.firstWhere((l) => l['country_code'] == code, orElse: () => langs.first);
+    if (langs == null || langs.isEmpty) return null;
+    final code = region?['data']?['country_iso_code']
+        ?? config['dialogue']?['default_language']
+        ?? 'GB';
+    try {
+      return langs.firstWhere(
+        (l) => l['country_code'] == code,
+        orElse: () => langs.first,
+      ) as Map<String, dynamic>?;
+    } catch (_) {
+      return langs.isNotEmpty ? langs.first as Map<String, dynamic>? : null;
+    }
   }
 
   static bool _isExpired(SeersConsent consent) {
