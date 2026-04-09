@@ -7,7 +7,7 @@ Seers Consent Management Platform SDK for Flutter.
 Add to your `pubspec.yaml`:
 ```yaml
 dependencies:
-  seers_cmp: ^1.0.0
+  seers_cmp: ^1.0.3
 ```
 
 Then run:

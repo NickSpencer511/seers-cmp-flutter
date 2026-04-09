@@ -1,7 +1,10 @@
+## 1.0.4
+- Auto-show banner without requiring onShowBanner callback
+- Add navigatorKey support for automatic banner display
+
 ## 1.0.3
 - Fix: Bad State: No element found when languages list is empty
-- Fix: Null safety in _resolveLanguage, _fetchConfig, _checkRegion
-- Fix: Added timeout to HTTP requests
+- Fix: Null safety improvements
 
 ## 1.0.2
 - Fix dart warnings

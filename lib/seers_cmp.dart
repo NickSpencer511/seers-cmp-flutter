@@ -132,8 +132,38 @@ class SeersCMP {
       regulation: region?['regulation'],
       sdkKey:     settingsId,
     );
+
+    // Fire custom callback if provided
     _onShowBanner?.call(payload);
+
+    // Auto-show banner if no custom callback provided and navigatorKey is set
+    if (_onShowBanner == null && _navigatorKey?.currentContext != null) {
+      _autoShowBanner(payload);
+    }
   }
+
+  /// Navigator key — set this to enable auto banner display without a callback.
+  /// In main.dart:
+  ///   SeersCMP.navigatorKey = GlobalKey<NavigatorState>();
+  ///   MaterialApp(navigatorKey: SeersCMP.navigatorKey, ...)
+  static GlobalKey<NavigatorState>? navigatorKey;
+
+  static void _autoShowBanner(SeersBannerPayload payload) {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) return;
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SeersBannerWidget(
+        payload: payload,
+        onDismiss: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+
+  static GlobalKey<NavigatorState>? get _navigatorKey => navigatorKey;
 
   /// Check if a specific SDK should be blocked.
   ///
