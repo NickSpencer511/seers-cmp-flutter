@@ -366,8 +366,7 @@ class SeersCMP {
 
 
 // ─────────────────────────────────────────────────────────────
-// Flutter Banner Widget
-// Uses ALL values from cb.json — same design as frontend preview
+// Flutter Banner Widget — exact match to frontend MobileDefaultBanner.vue
 // ─────────────────────────────────────────────────────────────
 
 class SeersBannerWidget extends StatefulWidget {
@@ -380,18 +379,17 @@ class SeersBannerWidget extends StatefulWidget {
 }
 
 class _SeersBannerWidgetState extends State<SeersBannerWidget> {
-  bool _showPreferences = false;
-  bool _prefOn = true;
-  bool _statOn = false;
-  bool _mktOn  = false;
+  bool _showPref = false;
+  bool _prefOn   = true;
+  bool _statOn   = false;
+  bool _mktOn    = false;
   final Set<String> _expanded = {};
 
-  // ── Shorthand getters ──
   Map<String, dynamic>? get _b => widget.payload.banner;
   Map<String, dynamic>? get _l => widget.payload.language;
   Map<String, dynamic>? get _d => widget.payload.dialogue;
 
-  // ── Colors from banner (exact same fields as frontend) ──
+  // ── Colors — exact same fields as frontend banner object ──
   Color get _bgColor      => _c(_b?['banner_bg_color']        ?? '#ffffff');
   Color get _titleColor   => _c(_b?['title_text_color']       ?? '#1a1a1a');
   Color get _bodyColor    => _c(_b?['body_text_color']        ?? '#1a1a1a');
@@ -399,178 +397,229 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
   Color get _agreeText    => _c(_b?['agree_text_color']       ?? '#ffffff');
   Color get _declineColor => _c(_b?['disagree_btn_color']     ?? '#1a1a2e');
   Color get _declineText  => _c(_b?['disagree_text_color']    ?? '#ffffff');
-  Color get _prefBgColor  => _c(_b?['preferences_btn_color']  ?? 'transparent');
-  Color get _prefText     => _c(_b?['preferences_text_color'] ?? '#3b6ef8');
+  Color get _prefTextColor=> _c(_b?['preferences_text_color'] ?? '#3b6ef8');
 
-  // ── Font size from banner ──
-  double get _fontSize    => double.tryParse(_b?['font_size']?.toString() ?? '14') ?? 14;
-  double get _titleSize   => _fontSize + 2;
+  // ── Font size from banner.font_size ──
+  double get _fs => double.tryParse(_b?['font_size']?.toString() ?? '14') ?? 14;
 
-  // ── Button shape from button_type ──
+  // ── Button shape from banner.button_type ──
+  // shape-default → radius 4, shape-flat → 0, shape-rounded → 20, shape-stroke → 4 + outline
+  String get _btnType => (_b?['button_type'] ?? 'default').toString();
   BorderRadius get _btnRadius {
-    final t = _b?['button_type'] ?? 'default';
-    if (t.toString().contains('rounded')) return BorderRadius.circular(20);
-    if (t.toString().contains('flat'))    return BorderRadius.zero;
-    return BorderRadius.circular(6); // default + stroke
+    if (_btnType.contains('rounded')) return BorderRadius.circular(20);
+    if (_btnType.contains('flat'))    return BorderRadius.zero;
+    return BorderRadius.circular(4); // default + stroke
   }
+  bool get _isStroke => _btnType.contains('stroke');
 
-  bool get _btnStroke => (_b?['button_type'] ?? '').toString().contains('stroke');
+  // ── Display style + layout + position ──
+  String get _template => (_d?['mobile_template'] ?? 'popup').toString();
+  String get _layout   => (_b?['layout']   ?? 'default').toString();
+  String get _position => (_b?['position'] ?? 'bottom').toString();
 
-  // ── Layout/template from dialogue ──
-  String get _template => _d?['mobile_template'] ?? 'popup';
-  String get _layout   => _b?['layout'] ?? 'default';
+  // ── Language from mobile_dialogue_languages ──
+  String get _body        => _l?['body']                ?? 'We use SDKs and other tracking technologies to improve your in-app experience.';
+  String get _title       => _l?['title']               ?? 'This app uses tracking technologies';
+  String get _btnAgree    => _l?['btn_agree_title']     ?? 'Allow All';
+  String get _btnDecline  => _l?['btn_disagree_title']  ?? 'Disable All';
+  String get _btnPref     => _l?['btn_preference_title']?? 'Cookie Settings';
+  String get _btnSave     => _l?['btn_save_my_choices'] ?? 'Save my choices';
+  String get _aboutCookies=> _l?['about_cookies']       ?? 'About Our Cookies';
+  String get _necTitle    => _l?['necessory_title']     ?? 'Necessary';
+  String get _necBody     => _l?['necessory_body']      ?? 'Required for the app to function. Cannot be switched off.';
+  String get _prefTitle   => _l?['preference_title']    ?? 'Preferences';
+  String get _prefBody    => _l?['preference_body']     ?? 'Allow the app to remember choices you make.';
+  String get _statTitle   => _l?['statistics_title']    ?? 'Statistics';
+  String get _statBody    => _l?['statistics_body']     ?? 'Help us understand how users interact with the app.';
+  String get _mktTitle    => _l?['marketing_title']     ?? 'Marketing';
+  String get _mktBody     => _l?['marketing_body']      ?? 'Used to track visitors and display relevant advertisements.';
+  String get _alwaysActive=> _l?['always_active']       ?? 'Always Active';
 
-  // ── Border radius for banner container ──
-  BorderRadius get _containerRadius {
-    if (_template == 'dialog') {
-      return _layout == 'rounded'
-          ? BorderRadius.circular(20)
-          : BorderRadius.circular(10);
+  bool get _allowReject => _d?['allow_reject'] == true || _d?['allow_reject'] == 1;
+  bool get _poweredBy   => _d?['powered_by']   == true || _d?['powered_by']   == 1;
+  bool get _showHandle  => _layout == 'rounded';
+
+  // ── Container border radius — matches frontend CSS exactly ──
+  BorderRadius _sheetRadius() {
+    // bottom_sheet
+    if (_template == 'bottom_sheet') {
+      if (_layout == 'flat')    return BorderRadius.zero;
+      if (_layout == 'rounded') return const BorderRadius.vertical(top: Radius.circular(16));
+      if (_position == 'top')   return const BorderRadius.vertical(bottom: Radius.circular(14));
+      return const BorderRadius.vertical(top: Radius.circular(14)); // bottom (default)
     }
-    // popup / bottom_sheet
-    if (_layout == 'flat') return BorderRadius.zero;
-    if (_layout == 'rounded') return const BorderRadius.vertical(top: Radius.circular(24));
-    return const BorderRadius.vertical(top: Radius.circular(16));
+    // dialog
+    if (_template == 'dialog') {
+      if (_layout == 'rounded') return BorderRadius.circular(20);
+      if (_layout == 'flat')    return BorderRadius.zero;
+      return BorderRadius.circular(10);
+    }
+    // popup — always bottom sheet style
+    return const BorderRadius.vertical(top: Radius.circular(12));
   }
-
-  // ── Language text — from mobile_dialogue_languages table ──
-  String get _title        => _l?['title']               ?? 'This app uses tracking technologies';
-  String get _body         => _l?['body']                ?? 'We use SDKs and other tracking technologies to improve your in-app experience.';
-  String get _btnAgree     => _l?['btn_agree_title']     ?? 'Allow All';
-  String get _btnDecline   => _l?['btn_disagree_title']  ?? 'Disable All';
-  String get _btnPref      => _l?['btn_preference_title']?? 'Cookie Settings';
-  String get _btnSave      => _l?['btn_save_my_choices'] ?? 'Save my choices';
-  String get _aboutCookies => _l?['about_cookies']       ?? 'About Our Cookies';
-  String get _necTitle     => _l?['necessory_title']     ?? 'Necessary';
-  String get _necBody      => _l?['necessory_body']      ?? 'Required for the app to function. Cannot be switched off.';
-  String get _prefTitle    => _l?['preference_title']    ?? 'Preferences';
-  String get _prefBody     => _l?['preference_body']     ?? 'Allow the app to remember choices you make.';
-  String get _statTitle    => _l?['statistics_title']    ?? 'Statistics';
-  String get _statBody     => _l?['statistics_body']     ?? 'Help us understand how users interact with the app.';
-  String get _mktTitle     => _l?['marketing_title']     ?? 'Marketing';
-  String get _mktBody      => _l?['marketing_body']      ?? 'Used to track visitors and display relevant advertisements.';
-  String get _alwaysActive => _l?['always_active']       ?? 'Always Active';
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.black54,
-      child: _template == 'dialog'
-          ? Center(child: _dialogBanner())
-          : Align(alignment: Alignment.bottomCenter,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                child: _showPreferences ? _preferencesView() : _mainBanner(),
-              )),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        child: _showPref ? _prefCenter() : _banner(),
+      ),
     );
   }
 
-  // ── Main banner (popup / bottom_sheet) ──
-  Widget _mainBanner() {
-    return Container(
-      key: const ValueKey('main'),
-      decoration: BoxDecoration(color: _bgColor, borderRadius: _containerRadius),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        // Body text
-        Text(_body, style: TextStyle(fontSize: _fontSize, color: _bodyColor, height: 1.5)),
-        const SizedBox(height: 14),
-        // Cookie Settings — outline button (Row 2 from frontend)
-        _outlineBtn(_btnPref, () => setState(() => _showPreferences = true)),
-        const SizedBox(height: 8),
-        // Decline — dark button
-        if (_d?['allow_reject'] == true || _d?['allow_reject'] == 1)
-          _solidBtn(_btnDecline, _declineColor, _declineText, () => _save('disagree', false, false, false)),
-        if (_d?['allow_reject'] == true || _d?['allow_reject'] == 1)
-          const SizedBox(height: 8),
-        // Allow All — primary button
-        _solidBtn(_btnAgree, _agreeColor, _agreeText, () => _save('agree', true, true, true)),
-        if (_d?['powered_by'] == true || _d?['powered_by'] == 1)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text('Powered by Seers', textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+  // ─────────────────────────────────────────────────────────
+  // MAIN BANNER — 3 display styles matching frontend exactly
+  // ─────────────────────────────────────────────────────────
+  Widget _banner() {
+    final container = Container(
+      key: const ValueKey('banner'),
+      decoration: BoxDecoration(
+        color: _bgColor,
+        borderRadius: _sheetRadius(),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.14), blurRadius: 24, offset: const Offset(0, -4))],
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: _template == 'bottom_sheet' ? _bottomSheetContent() : _popupContent(),
+    );
+
+    if (_template == 'dialog') {
+      // Centered modal
+      return Center(
+        child: Container(
+          key: const ValueKey('dialog'),
+          width: MediaQuery.of(context).size.width * 0.88,
+          decoration: BoxDecoration(
+            color: _bgColor,
+            borderRadius: _sheetRadius(),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 24)],
           ),
-      ]),
-    );
-  }
-
-  // ── Dialog style banner ──
-  Widget _dialogBanner() {
-    return Container(
-      key: const ValueKey('dialog'),
-      width: MediaQuery.of(context).size.width * 0.88,
-      decoration: BoxDecoration(color: _bgColor, borderRadius: _containerRadius,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)]),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(_body, style: TextStyle(fontSize: _fontSize, color: _bodyColor, height: 1.5)),
-        const SizedBox(height: 14),
-        _outlineBtn(_btnPref, () => setState(() => _showPreferences = true)),
-        const SizedBox(height: 8),
-        if (_d?['allow_reject'] == true || _d?['allow_reject'] == 1)
-          _solidBtn(_btnDecline, _declineColor, _declineText, () => _save('disagree', false, false, false)),
-        if (_d?['allow_reject'] == true || _d?['allow_reject'] == 1)
-          const SizedBox(height: 8),
-        _solidBtn(_btnAgree, _agreeColor, _agreeText, () => _save('agree', true, true, true)),
-      ]),
-    );
-  }
-
-  // ── Preference center ──
-  Widget _preferencesView() {
-    return Container(
-      key: const ValueKey('prefs'),
-      height: MediaQuery.of(context).size.height * 0.88,
-      decoration: BoxDecoration(color: _bgColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
-      child: Column(children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Row(children: [
-            Expanded(child: Text(_aboutCookies,
-                style: TextStyle(fontSize: _titleSize, fontWeight: FontWeight.bold, color: _titleColor))),
-            GestureDetector(onTap: widget.onDismiss,
-                child: Icon(Icons.close, color: _bodyColor, size: 18)),
-          ]),
+          padding: const EdgeInsets.all(12),
+          child: _popupContent(),
         ),
-        Expanded(child: SingleChildScrollView(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // Body
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(_body, style: TextStyle(fontSize: _fontSize - 1, color: _bodyColor, height: 1.5))),
-          const SizedBox(height: 10),
-          // Allow All
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _solidBtn(_btnAgree, _agreeColor, _agreeText, () => _save('agree', true, true, true))),
-          const SizedBox(height: 6),
-          // Disable All
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _solidBtn(_btnDecline, _declineColor, _declineText, () => _save('disagree', false, false, false))),
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-          // Categories — from language table
-          _catRow('necessary',   _necTitle,  _necBody,  alwaysActive: true,  val: true,   onChange: (_) {}),
-          _catRow('preferences', _prefTitle, _prefBody, alwaysActive: false, val: _prefOn, onChange: (v) => setState(() => _prefOn = v)),
-          _catRow('statistics',  _statTitle, _statBody, alwaysActive: false, val: _statOn, onChange: (v) => setState(() => _statOn = v)),
-          _catRow('marketing',   _mktTitle,  _mktBody,  alwaysActive: false, val: _mktOn,  onChange: (v) => setState(() => _mktOn  = v)),
-          const SizedBox(height: 80),
-        ]))),
-        // Sticky Save footer
-        Container(
-          decoration: BoxDecoration(color: _bgColor,
-              border: const Border(top: BorderSide(color: Color(0xFFe0e0e0)))),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: _solidBtn(_btnSave, _agreeColor, _agreeText,
-              () => _save('custom', _prefOn, _statOn, _mktOn),
-              fontSize: _fontSize + 1),
-        ),
-      ]),
+      );
+    }
+
+    // popup + bottom_sheet — anchored to bottom or top
+    return Align(
+      alignment: _position == 'top' ? Alignment.topCenter : Alignment.bottomCenter,
+      child: container,
     );
   }
 
-  // ── Category accordion row ──
+  // ── Popup content: body text + 3 stacked full-width buttons ──
+  // Matches frontend: stk-outline → stk-dark → stk-primary
+  Widget _popupContent() {
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(_body, style: TextStyle(fontSize: _fs, color: _bodyColor, height: 1.5)),
+      const SizedBox(height: 10),
+      // Cookie Settings — outline (stk-outline)
+      _stkOutline(_btnPref, () => setState(() => _showPref = true)),
+      const SizedBox(height: 5),
+      // Disable All — dark (stk-dark)
+      if (_allowReject) _stkDark(_btnDecline, () => _save('disagree', false, false, false)),
+      if (_allowReject) const SizedBox(height: 5),
+      // Allow All — primary (stk-primary)
+      _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
+      if (_poweredBy) ...[
+        const SizedBox(height: 6),
+        Text('Powered by Seers', textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+      ],
+    ]);
+  }
+
+  // ── Bottom sheet content: title + body + [Decline|Accept] row + Preferences full-width ──
+  // Matches frontend: btn-row-primary + btn-pref-full
+  Widget _bottomSheetContent() {
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (_showHandle)
+        Center(child: Container(width: 32, height: 4,
+            margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+      Text(_title, style: TextStyle(fontSize: _fs + 2, fontWeight: FontWeight.w700, color: _titleColor)),
+      const SizedBox(height: 4),
+      Text(_body, style: TextStyle(fontSize: _fs, color: _bodyColor, height: 1.4)),
+      const SizedBox(height: 8),
+      // Row 1: Decline + Accept side by side (btn-row-primary)
+      Row(children: [
+        if (_allowReject) ...[
+          Expanded(child: _btnItem(_btnDecline, _declineColor, _declineText, () => _save('disagree', false, false, false))),
+          const SizedBox(width: 4),
+        ],
+        Expanded(child: _btnItem(_btnAgree, _agreeColor, _agreeText, () => _save('agree', true, true, true))),
+      ]),
+      const SizedBox(height: 4),
+      // Row 2: Preferences full-width outline (btn-pref-full)
+      _prefFullBtn(_btnPref, () => setState(() => _showPref = true)),
+      if (_poweredBy) ...[
+        const SizedBox(height: 4),
+        Text('Powered by Seers', textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+      ],
+    ]);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // PREFERENCE CENTER — full screen, sticky Save footer
+  // ─────────────────────────────────────────────────────────
+  Widget _prefCenter() {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        key: const ValueKey('pref'),
+        height: MediaQuery.of(context).size.height * 0.88,
+        decoration: BoxDecoration(color: _bgColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+        child: Column(children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Row(children: [
+              Expanded(child: Text(_aboutCookies,
+                  style: TextStyle(fontSize: _fs + 2, fontWeight: FontWeight.bold, color: _titleColor))),
+              GestureDetector(onTap: widget.onDismiss,
+                  child: Icon(Icons.close, color: _bodyColor, size: 18)),
+            ]),
+          ),
+          // Scrollable body
+          Expanded(child: SingleChildScrollView(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(_body, style: TextStyle(fontSize: _fs - 1, color: _bodyColor, height: 1.5))),
+            const SizedBox(height: 10),
+            // Allow All
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _stkPrimary(_btnAgree, () => _save('agree', true, true, true))),
+            const SizedBox(height: 6),
+            // Disable All
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _stkDark(_btnDecline, () => _save('disagree', false, false, false))),
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            // Categories with accordion
+            _catRow('necessary',   _necTitle,  _necBody,  alwaysActive: true,  val: true,   onChange: (_) {}),
+            _catRow('preferences', _prefTitle, _prefBody, alwaysActive: false, val: _prefOn, onChange: (v) => setState(() => _prefOn = v)),
+            _catRow('statistics',  _statTitle, _statBody, alwaysActive: false, val: _statOn, onChange: (v) => setState(() => _statOn = v)),
+            _catRow('marketing',   _mktTitle,  _mktBody,  alwaysActive: false, val: _mktOn,  onChange: (v) => setState(() => _mktOn  = v)),
+            const SizedBox(height: 80),
+          ]))),
+          // Sticky Save my choices footer
+          Container(
+            decoration: BoxDecoration(color: _bgColor,
+                border: const Border(top: BorderSide(color: Color(0xFFe0e0e0)))),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: _stkPrimary(_btnSave, () => _save('custom', _prefOn, _statOn, _mktOn)),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Category accordion row
+  // ─────────────────────────────────────────────────────────
   Widget _catRow(String key, String title, String desc,
       {required bool alwaysActive, required bool val, required ValueChanged<bool> onChange}) {
     final open = _expanded.contains(key);
@@ -579,48 +628,105 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
         leading: GestureDetector(
           onTap: () => setState(() { open ? _expanded.remove(key) : _expanded.add(key); }),
           child: Icon(open ? Icons.expand_circle_down : Icons.chevron_right,
-              color: _agreeColor, size: 22),
+              color: _agreeColor, size: 20),
         ),
-        title: Text(title, style: TextStyle(fontSize: _fontSize, fontWeight: FontWeight.w600, color: _bodyColor)),
+        title: Text(title, style: TextStyle(fontSize: _fs, fontWeight: FontWeight.w600, color: _bodyColor)),
         trailing: alwaysActive
-            ? Text(_alwaysActive, style: TextStyle(fontSize: _fontSize - 2, fontWeight: FontWeight.w600, color: _agreeColor))
+            ? Text(_alwaysActive, style: TextStyle(fontSize: _fs - 2, fontWeight: FontWeight.w600, color: _agreeColor))
             : Switch(value: val, onChanged: onChange, activeTrackColor: _agreeColor, activeThumbColor: Colors.white),
         dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
       ),
       if (open)
         Padding(
-          padding: const EdgeInsets.fromLTRB(56, 0, 16, 8),
-          child: Text(desc, style: TextStyle(fontSize: _fontSize - 2, color: _bodyColor.withValues(alpha: 0.75))),
+          padding: const EdgeInsets.fromLTRB(52, 0, 16, 8),
+          child: Text(desc, style: TextStyle(fontSize: _fs - 2, color: _bodyColor.withValues(alpha: 0.75))),
         ),
-      const Divider(height: 1, indent: 16),
+      const Divider(height: 1, indent: 12),
     ]);
   }
 
-  // ── Button builders ──
-  Widget _solidBtn(String label, Color bg, Color fg, VoidCallback onTap, {double? fontSize}) {
+  // ─────────────────────────────────────────────────────────
+  // Button builders — match frontend button shapes exactly
+  // ─────────────────────────────────────────────────────────
+
+  // stk-outline: transparent bg, border = preferences_text_color
+  Widget _stkOutline(String label, VoidCallback onTap) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _prefTextColor,
+        backgroundColor: Colors.transparent,
+        side: BorderSide(color: _prefTextColor, width: 1.5),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
+        minimumSize: const Size(double.infinity, 0),
+      ),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs)),
+    );
+  }
+
+  // stk-dark: #1a1a2e bg, white text
+  Widget _stkDark(String label, VoidCallback onTap) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _declineColor,
+        foregroundColor: _declineText,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
+        elevation: 0,
+        minimumSize: const Size(double.infinity, 0),
+      ),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs)),
+    );
+  }
+
+  // stk-primary: agree_btn_color bg
+  Widget _stkPrimary(String label, VoidCallback onTap) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _isStroke ? Colors.transparent : _agreeColor,
+        foregroundColor: _isStroke ? _agreeColor : _agreeText,
+        side: _isStroke ? BorderSide(color: _agreeColor) : null,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
+        elevation: 0,
+        minimumSize: const Size(double.infinity, 0),
+      ),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs)),
+    );
+  }
+
+  // btn-item: equal-width side-by-side (bottom_sheet row 1)
+  Widget _btnItem(String label, Color bg, Color fg, VoidCallback onTap) {
     return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
         backgroundColor: bg, foregroundColor: fg,
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: _btnRadius),
         elevation: 0,
       ),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize ?? _fontSize)),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs),
+          overflow: TextOverflow.ellipsis),
     );
   }
 
-  Widget _outlineBtn(String label, VoidCallback onTap) {
+  // btn-pref-full: full-width outline (bottom_sheet row 2)
+  Widget _prefFullBtn(String label, VoidCallback onTap) {
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
-        foregroundColor: _prefText,
-        backgroundColor: _btnStroke ? Colors.transparent : _prefBgColor,
-        side: BorderSide(color: _prefText),
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        foregroundColor: _prefTextColor,
+        backgroundColor: Colors.transparent,
+        side: BorderSide(color: _prefTextColor),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: _btnRadius),
+        minimumSize: const Size(double.infinity, 0),
       ),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: _fontSize)),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs)),
     );
   }
 
