@@ -218,15 +218,22 @@ class SeersCMP {
   // ─────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>?> _fetchConfig(String sdkKey) async {
+    // Add cache-busting so deleted configs are not served from CDN cache
+    final ts = DateTime.now().millisecondsSinceEpoch ~/ 60000; // changes every minute
     final urls = [
-      'https://cdn.consents.dev/mobile/configs/$sdkKey.json',
+      'https://cdn.consents.dev/mobile/configs/$sdkKey.json?v=$ts',
     ];
     for (final url in urls) {
       try {
         final r = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+        if (r.statusCode == 404) return {'eligible': false, 'message': 'App not found'};
         if (r.statusCode == 200) {
           final decoded = jsonDecode(r.body);
-          if (decoded is Map<String, dynamic>) return decoded;
+          if (decoded is Map<String, dynamic>) {
+            // If eligible is explicitly false, stop here
+            if (decoded['eligible'] == false) return decoded;
+            return decoded;
+          }
         }
       } catch (_) {}
     }

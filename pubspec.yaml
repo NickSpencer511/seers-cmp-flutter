@@ -1,6 +1,6 @@
 name: seers_cmp
 description: Seers Consent Management Platform SDK for Flutter
-version: 1.1.1
+version: 1.1.2
 homepage: https://github.com/NickSpencer511/seers-cmp-flutter
 
 environment:
