@@ -232,12 +232,24 @@ class SeersCMP {
       return {'regulation': 'gdpr', 'eligible': true};
     }
     try {
-      final r = await http.get(Uri.parse('$host/api/mobile/sdk/$sdkKey'))
-          .timeout(const Duration(seconds: 10));
+      // Send app package name in header so backend can verify app identity
+      final headers = <String, String>{};
+      if (_appId != null) headers['X-App-ID'] = _appId!;
+      final r = await http.get(
+        Uri.parse('$host/api/mobile/sdk/$sdkKey'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     return {'regulation': 'gdpr', 'eligible': true};
   }
+
+  /// Optional: set your app's package/bundle ID for security verification.
+  /// If set, the backend will reject requests from apps with a different ID.
+  ///
+  ///   SeersCMP.appId = 'com.company.myapp';
+  static String? appId;
+  static String? get _appId => appId;
 
   static SeersBlockList _buildBlockList(Map<String, dynamic> config) {
     final list    = SeersBlockList();

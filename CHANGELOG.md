@@ -1,16 +1,18 @@
+## 1.0.5
+- Add appId property for app identity verification
+- Backend verifies X-App-ID header matches registered bundle_id/package_name
+
 ## 1.0.4
-- Auto-show banner without requiring onShowBanner callback
-- Add navigatorKey support for automatic banner display
+- Auto-show banner via navigatorKey without requiring onShowBanner callback
 
 ## 1.0.3
-- Fix: Bad State: No element found when languages list is empty
-- Fix: Null safety improvements
+- Fix: Bad State No element found
 
 ## 1.0.2
 - Fix dart warnings
 
 ## 1.0.1
-- Use staging CDN cdn.consents.dev
+- Use staging CDN
 
 ## 1.0.0
 - Initial release
