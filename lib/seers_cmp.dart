@@ -366,7 +366,8 @@ class SeersCMP {
 
 
 // ─────────────────────────────────────────────────────────────
-// Flutter Banner Widget — exact match to frontend MobileDefaultBanner.vue
+// SeersBannerWidget — pixel-perfect match to MobileDefaultBanner.vue
+// CSS values scaled from 190px preview to real screen proportions
 // ─────────────────────────────────────────────────────────────
 
 class SeersBannerWidget extends StatefulWidget {
@@ -380,353 +381,414 @@ class SeersBannerWidget extends StatefulWidget {
 
 class _SeersBannerWidgetState extends State<SeersBannerWidget> {
   bool _showPref = false;
-  bool _prefOn   = true;
-  bool _statOn   = false;
-  bool _mktOn    = false;
+  // preferences starts checked — matches :checked="cat.key === 'preferences'"
+  final Map<String, bool> _toggles = {'preferences': true, 'statistics': false, 'marketing': false};
   final Set<String> _expanded = {};
 
   Map<String, dynamic>? get _b => widget.payload.banner;
   Map<String, dynamic>? get _l => widget.payload.language;
   Map<String, dynamic>? get _d => widget.payload.dialogue;
 
-  // ── Colors — exact same fields as frontend banner object ──
-  Color get _bgColor      => _c(_b?['banner_bg_color']        ?? '#ffffff');
-  Color get _titleColor   => _c(_b?['title_text_color']       ?? '#1a1a1a');
-  Color get _bodyColor    => _c(_b?['body_text_color']        ?? '#1a1a1a');
-  Color get _agreeColor   => _c(_b?['agree_btn_color']        ?? '#3b6ef8');
-  Color get _agreeText    => _c(_b?['agree_text_color']       ?? '#ffffff');
-  Color get _declineColor => _c(_b?['disagree_btn_color']     ?? '#1a1a2e');
-  Color get _declineText  => _c(_b?['disagree_text_color']    ?? '#ffffff');
-  Color get _prefTextColor=> _c(_b?['preferences_text_color'] ?? '#3b6ef8');
+  // ── Colors — exact same fields as frontend ──
+  Color get _bg       => _c(_b?['banner_bg_color']        ?? '#ffffff');
+  Color get _titleClr => _c(_b?['title_text_color']       ?? '#1a1a1a');
+  Color get _bodyClr  => _c(_b?['body_text_color']        ?? '#1a1a1a');
+  Color get _agreeClr => _c(_b?['agree_btn_color']        ?? '#3b6ef8');
+  Color get _agreeTxt => _c(_b?['agree_text_color']       ?? '#ffffff');
+  Color get _decClr   => _c(_b?['disagree_btn_color']     ?? '#1a1a2e');
+  Color get _decTxt   => _c(_b?['disagree_text_color']    ?? '#ffffff');
+  // prefFullStyle uses body_text_color for both color and border
+  Color get _prefClr  => _bodyClr;
 
   // ── Font size from banner.font_size ──
-  double get _fs => double.tryParse(_b?['font_size']?.toString() ?? '14') ?? 14;
+  // Preview uses font_size directly (6-8px in 190px frame)
+  // Real app: use font_size as-is (user sets it in dashboard, e.g. 14)
+  double get _fs      => double.tryParse(_b?['font_size']?.toString() ?? '14') ?? 14;
+  double get _titleFs => _fs + 2; // titleStyle: font_size + 2
 
-  // ── Button shape from banner.button_type ──
-  // shape-default → radius 4, shape-flat → 0, shape-rounded → 20, shape-stroke → 4 + outline
+  // ── Button shape from button_type ──
   String get _btnType => (_b?['button_type'] ?? 'default').toString();
-  BorderRadius get _btnRadius {
-    if (_btnType.contains('rounded')) return BorderRadius.circular(20);
-    if (_btnType.contains('flat'))    return BorderRadius.zero;
-    return BorderRadius.circular(4); // default + stroke
+  BorderRadius get _btnR {
+    if (_btnType.contains('rounded')) return BorderRadius.circular(20); // shape-rounded
+    if (_btnType.contains('flat'))    return BorderRadius.zero;          // shape-flat
+    return BorderRadius.circular(4);                                      // shape-default + stroke
   }
   bool get _isStroke => _btnType.contains('stroke');
 
-  // ── Display style + layout + position ──
-  String get _template => (_d?['mobile_template'] ?? 'popup').toString();
-  String get _layout   => (_b?['layout']   ?? 'default').toString();
-  String get _position => (_b?['position'] ?? 'bottom').toString();
+  // ── prefFullStyle border color = body_text_color ──
+  Color get _prefBorder => _bodyClr;
 
-  // ── Language from mobile_dialogue_languages ──
-  String get _body        => _l?['body']                ?? 'We use SDKs and other tracking technologies to improve your in-app experience.';
-  String get _title       => _l?['title']               ?? 'This app uses tracking technologies';
-  String get _btnAgree    => _l?['btn_agree_title']     ?? 'Allow All';
-  String get _btnDecline  => _l?['btn_disagree_title']  ?? 'Disable All';
-  String get _btnPref     => _l?['btn_preference_title']?? 'Cookie Settings';
-  String get _btnSave     => _l?['btn_save_my_choices'] ?? 'Save my choices';
-  String get _aboutCookies=> _l?['about_cookies']       ?? 'About Our Cookies';
-  String get _necTitle    => _l?['necessory_title']     ?? 'Necessary';
-  String get _necBody     => _l?['necessory_body']      ?? 'Required for the app to function. Cannot be switched off.';
-  String get _prefTitle   => _l?['preference_title']    ?? 'Preferences';
-  String get _prefBody    => _l?['preference_body']     ?? 'Allow the app to remember choices you make.';
-  String get _statTitle   => _l?['statistics_title']    ?? 'Statistics';
-  String get _statBody    => _l?['statistics_body']     ?? 'Help us understand how users interact with the app.';
-  String get _mktTitle    => _l?['marketing_title']     ?? 'Marketing';
-  String get _mktBody     => _l?['marketing_body']      ?? 'Used to track visitors and display relevant advertisements.';
-  String get _alwaysActive=> _l?['always_active']       ?? 'Always Active';
+  // ── Display style / layout / position ──
+  String get _tmpl => (_d?['mobile_template'] ?? 'popup').toString();
+  String get _lay  => (_b?['layout']   ?? 'default').toString();
+  String get _pos  => (_b?['position'] ?? 'bottom').toString();
+
+  // showHandle only when layout === 'rounded'
+  bool get _handle => _lay == 'rounded';
 
   bool get _allowReject => _d?['allow_reject'] == true || _d?['allow_reject'] == 1;
   bool get _poweredBy   => _d?['powered_by']   == true || _d?['powered_by']   == 1;
-  bool get _showHandle  => _layout == 'rounded';
 
-  // ── Container border radius — matches frontend CSS exactly ──
-  BorderRadius _sheetRadius() {
-    // bottom_sheet
-    if (_template == 'bottom_sheet') {
-      if (_layout == 'flat')    return BorderRadius.zero;
-      if (_layout == 'rounded') return const BorderRadius.vertical(top: Radius.circular(16));
-      if (_position == 'top')   return const BorderRadius.vertical(bottom: Radius.circular(14));
-      return const BorderRadius.vertical(top: Radius.circular(14)); // bottom (default)
-    }
-    // dialog
-    if (_template == 'dialog') {
-      if (_layout == 'rounded') return BorderRadius.circular(20);
-      if (_layout == 'flat')    return BorderRadius.zero;
+  // ── Language fields ──
+  String get _body        => _l?['body']                ?? 'We use cookies to personalize content and ads, to provide social media features and to analyze our traffic.';
+  String get _title       => _l?['title']               ?? 'We use cookies';
+  String get _btnAgree    => _l?['btn_agree_title']     ?? 'Allow All';
+  String get _btnDecline  => _l?['btn_disagree_title']  ?? 'Disable All';
+  String get _btnPref     => _l?['btn_preference_title']?? 'Cookie settings';
+  String get _btnSave     => _l?['btn_save_my_choices'] ?? 'Save my choices';
+  String get _aboutCookies=> _l?['about_cookies']       ?? 'About Our Cookies';
+  String get _alwaysActive=> _l?['always_active']       ?? 'Always Active';
+
+  List<Map<String, String>> get _cats => [
+    {'key': 'necessary',   'label': _l?['necessory_title']  ?? 'Necessary',   'desc': _l?['necessory_body']  ?? 'Required for the website to function. Cannot be switched off.'},
+    {'key': 'preferences', 'label': _l?['preference_title'] ?? 'Preferences', 'desc': _l?['preference_body'] ?? 'Allow the website to remember choices you make.'},
+    {'key': 'statistics',  'label': _l?['statistics_title'] ?? 'Statistics',  'desc': _l?['statistics_body'] ?? 'Help us understand how visitors interact with the website.'},
+    {'key': 'marketing',   'label': _l?['marketing_title']  ?? 'Marketing',   'desc': _l?['marketing_body']  ?? 'Used to track visitors and display relevant advertisements.'},
+  ];
+
+  // ── Container border radius — matches CSS exactly ──
+  BorderRadius _radius() {
+    if (_tmpl == 'dialog') {
+      if (_lay == 'rounded') return BorderRadius.circular(20);
+      if (_lay == 'flat')    return BorderRadius.zero;
       return BorderRadius.circular(10);
     }
-    // popup — always bottom sheet style
+    if (_lay == 'flat') return BorderRadius.zero;
+    if (_lay == 'rounded') return _pos == 'top'
+        ? const BorderRadius.vertical(bottom: Radius.circular(16))
+        : const BorderRadius.vertical(top: Radius.circular(16));
+    // default
+    if (_pos == 'top') return const BorderRadius.vertical(bottom: Radius.circular(14));
     return const BorderRadius.vertical(top: Radius.circular(12));
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_showPref) return _prefPanel();
+    if (_tmpl == 'dialog') {
+      return Material(color: Colors.black54, child: Center(child: _dialogBanner()));
+    }
     return Material(
       color: Colors.black54,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 280),
-        child: _showPref ? _prefCenter() : _banner(),
+      child: Align(
+        alignment: _pos == 'top' ? Alignment.topCenter : Alignment.bottomCenter,
+        child: _tmpl == 'bottom_sheet' ? _bottomSheet() : _popup(),
       ),
     );
   }
 
-  // ─────────────────────────────────────────────────────────
-  // MAIN BANNER — 3 display styles matching frontend exactly
-  // ─────────────────────────────────────────────────────────
-  Widget _banner() {
-    final container = Container(
-      key: const ValueKey('banner'),
-      decoration: BoxDecoration(
-        color: _bgColor,
-        borderRadius: _sheetRadius(),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.14), blurRadius: 24, offset: const Offset(0, -4))],
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      child: _template == 'bottom_sheet' ? _bottomSheetContent() : _popupContent(),
-    );
-
-    if (_template == 'dialog') {
-      // Centered modal
-      return Center(
-        child: Container(
-          key: const ValueKey('dialog'),
-          width: MediaQuery.of(context).size.width * 0.88,
-          decoration: BoxDecoration(
-            color: _bgColor,
-            borderRadius: _sheetRadius(),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 24)],
-          ),
-          padding: const EdgeInsets.all(12),
-          child: _popupContent(),
-        ),
-      );
-    }
-
-    // popup + bottom_sheet — anchored to bottom or top
-    return Align(
-      alignment: _position == 'top' ? Alignment.topCenter : Alignment.bottomCenter,
-      child: container,
-    );
-  }
-
-  // ── Popup content: body text + 3 stacked full-width buttons ──
-  // Matches frontend: stk-outline → stk-dark → stk-primary
-  Widget _popupContent() {
-    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(_body, style: TextStyle(fontSize: _fs, color: _bodyColor, height: 1.5)),
-      const SizedBox(height: 10),
-      // Cookie Settings — outline (stk-outline)
-      _stkOutline(_btnPref, () => setState(() => _showPref = true)),
-      const SizedBox(height: 5),
-      // Disable All — dark (stk-dark)
-      if (_allowReject) _stkDark(_btnDecline, () => _save('disagree', false, false, false)),
-      if (_allowReject) const SizedBox(height: 5),
-      // Allow All — primary (stk-primary)
-      _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
-      if (_poweredBy) ...[
-        const SizedBox(height: 6),
-        Text('Powered by Seers', textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: Colors.grey[500])),
-      ],
-    ]);
-  }
-
-  // ── Bottom sheet content: title + body + [Decline|Accept] row + Preferences full-width ──
-  // Matches frontend: btn-row-primary + btn-pref-full
-  Widget _bottomSheetContent() {
-    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (_showHandle)
-        Center(child: Container(width: 32, height: 4,
-            margin: const EdgeInsets.only(bottom: 6),
-            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
-      Text(_title, style: TextStyle(fontSize: _fs + 2, fontWeight: FontWeight.w700, color: _titleColor)),
-      const SizedBox(height: 4),
-      Text(_body, style: TextStyle(fontSize: _fs, color: _bodyColor, height: 1.4)),
-      const SizedBox(height: 8),
-      // Row 1: Decline + Accept side by side (btn-row-primary)
-      Row(children: [
-        if (_allowReject) ...[
-          Expanded(child: _btnItem(_btnDecline, _declineColor, _declineText, () => _save('disagree', false, false, false))),
-          const SizedBox(width: 4),
-        ],
-        Expanded(child: _btnItem(_btnAgree, _agreeColor, _agreeText, () => _save('agree', true, true, true))),
+  // ══════════════════════════════════════════
+  // POPUP — .consent-popup
+  // padding: 12px 12px 10px
+  // 3 stacked buttons: stk-btn (padding: 5px 8px, margin-bottom: 5px, font-weight:700, line-height:1.4)
+  // ══════════════════════════════════════════
+  Widget _popup() {
+    return Container(
+      decoration: BoxDecoration(color: _bg, borderRadius: _radius(),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.14), blurRadius: 24, offset: const Offset(0, -4))]),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // banner-body: margin: 0 0 7px, line-height: 1.5, opacity: 0.9
+        Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.9), height: 1.5)),
+        const SizedBox(height: 7),
+        _stkOutline(_btnPref, () => setState(() => _showPref = true)),
+        const SizedBox(height: 5),
+        if (_allowReject) ...[_stkDark(_btnDecline, () => _save('disagree', false, false, false)), const SizedBox(height: 5)],
+        _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
+        if (_poweredBy) ...[const SizedBox(height: 3),
+          Text('Powered by Seers', textAlign: TextAlign.center, style: TextStyle(fontSize: _fs * 0.7, color: const Color(0xFFaaaaaa)))],
       ]),
-      const SizedBox(height: 4),
-      // Row 2: Preferences full-width outline (btn-pref-full)
-      _prefFullBtn(_btnPref, () => setState(() => _showPref = true)),
-      if (_poweredBy) ...[
-        const SizedBox(height: 4),
-        Text('Powered by Seers', textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: Colors.grey[500])),
-      ],
-    ]);
+    );
   }
 
-  // ─────────────────────────────────────────────────────────
-  // PREFERENCE CENTER — full screen, sticky Save footer
-  // ─────────────────────────────────────────────────────────
-  Widget _prefCenter() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        key: const ValueKey('pref'),
-        height: MediaQuery.of(context).size.height * 0.88,
-        decoration: BoxDecoration(color: _bgColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
-        child: Column(children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+  // ══════════════════════════════════════════
+  // BOTTOM SHEET — .consent-sheet
+  // padding: 10px 10px 8px
+  // btn-row-primary: gap:4px, margin-bottom:4px
+  // btn-item: padding:4px, font-weight:600
+  // btn-pref-full: padding:4px 6px, margin-bottom:3px, font-weight:600
+  // ══════════════════════════════════════════
+  Widget _bottomSheet() {
+    return Container(
+      decoration: BoxDecoration(color: _bg, borderRadius: _radius(),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 12, offset: const Offset(0, -2))]),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // sheet-handle: width:32px, height:4px, background:#ccc, border-radius:2px, margin:0 auto 6px
+        if (_handle) Center(child: Container(width: 32, height: 4, margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(color: const Color(0xFFcccccc), borderRadius: BorderRadius.circular(2)))),
+        // banner-title: font-weight:700, margin:0 0 4px, line-height:1.3
+        Text(_title, style: TextStyle(fontSize: _titleFs, color: _titleClr, fontWeight: FontWeight.w700, height: 1.3)),
+        const SizedBox(height: 4),
+        // banner-body: margin:0 0 7px, line-height:1.5, opacity:0.9
+        Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.9), height: 1.5)),
+        const SizedBox(height: 7),
+        // btn-row-primary: flex, gap:4px, margin-bottom:4px
+        Row(children: [
+          if (_allowReject) ...[
+            Expanded(child: _btnItem(_btnDecline, _decClr, _decTxt, () => _save('disagree', false, false, false))),
+            const SizedBox(width: 4),
+          ],
+          Expanded(child: _btnItem(_btnAgree, _agreeClr, _agreeTxt, () => _save('agree', true, true, true))),
+        ]),
+        const SizedBox(height: 4),
+        // btn-pref-full: padding:4px 6px, margin-bottom:3px, border:1px solid currentColor, font-weight:600
+        _prefFullBtn(_btnPref, () => setState(() => _showPref = true)),
+        if (_poweredBy) ...[const SizedBox(height: 3),
+          Text('Powered by Seers', textAlign: TextAlign.center, style: TextStyle(fontSize: _fs * 0.7, color: const Color(0xFFaaaaaa)))],
+      ]),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  // DIALOG — .consent-modal, width:82%, padding:12px
+  // ══════════════════════════════════════════
+  Widget _dialogBanner() {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.88,
+      decoration: BoxDecoration(color: _bg, borderRadius: _radius(),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 24)]),
+      padding: const EdgeInsets.all(12),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(_title, style: TextStyle(fontSize: _titleFs, color: _titleClr, fontWeight: FontWeight.w700, height: 1.3)),
+        const SizedBox(height: 4),
+        Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.9), height: 1.5)),
+        const SizedBox(height: 8),
+        _stkOutline(_btnPref, () => setState(() => _showPref = true)),
+        const SizedBox(height: 5),
+        if (_allowReject) ...[_stkDark(_btnDecline, () => _save('disagree', false, false, false)), const SizedBox(height: 5)],
+        _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
+      ]),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  // PREFERENCE PANEL — .pref-modal (full screen)
+  // .pref-scroll: padding:8px 10px 6px, gap:4px
+  // .pref-footer: padding:6px 10px 8px, border-top:1px solid #e0e0e0
+  // ══════════════════════════════════════════
+  Widget _prefPanel() {
+    return Material(
+      color: Colors.black54,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.88,
+          decoration: BoxDecoration(color: _bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+          child: Column(children: [
+            // pref-scroll
+            Expanded(child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                // pref-close: font-size:10px, align-self:flex-end
+                Align(alignment: Alignment.centerRight,
+                  child: GestureDetector(onTap: widget.onDismiss,
+                    child: Text('✕', style: TextStyle(fontSize: _fs, color: _titleClr, fontWeight: FontWeight.w700)))),
+                const SizedBox(height: 2),
+                // pref-title: font-weight:700, font-size:8px (scaled: titleFs)
+                Text(_aboutCookies, style: TextStyle(fontSize: _titleFs, fontWeight: FontWeight.w700, color: _titleClr, height: 1.3)),
+                const SizedBox(height: 4),
+                // pref-body: font-size:6px, opacity:0.85, line-height:1.4
+                Text(_body, style: TextStyle(fontSize: _fs - 1, color: _bodyClr.withValues(alpha: 0.85), height: 1.4)),
+                const SizedBox(height: 4),
+                // pref-policy-link: font-size:6px, font-weight:600, underline, color:agree_btn_color
+                Text('Read Cookie Policy ↗', style: TextStyle(fontSize: _fs - 2, fontWeight: FontWeight.w600,
+                    color: _agreeClr, decoration: TextDecoration.underline, decorationColor: _agreeClr)),
+                const SizedBox(height: 6),
+                // pref-allow-btn: padding:4px 6px, font-weight:700, border-radius:4px, font-size:7px
+                _prefActionBtn(_btnAgree, _agreeClr, _agreeTxt, () => _save('agree', true, true, true)),
+                const SizedBox(height: 4),
+                // pref-disable-btn: background:#1a1a2e, color:#fff
+                _prefActionBtn(_btnDecline, const Color(0xFF1a1a2e), Colors.white, () => _save('disagree', false, false, false)),
+                const SizedBox(height: 8),
+                // pref-categories: gap:3px, border-top:1px solid #e0e0e0, padding-top:4px
+                Container(
+                  decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFe0e0e0)))),
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Column(children: _cats.map(_catRow).toList()),
+                ),
+              ]),
+            )),
+            // pref-footer: padding:6px 10px 8px, border-top:1px #e0e0e0, box-shadow
+            Container(
+              decoration: BoxDecoration(color: _bg,
+                border: const Border(top: BorderSide(color: Color(0xFFe0e0e0))),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, -2))]),
+              padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+              // pref-save-btn: padding:5px 6px, font-weight:700, border-radius:4px
+              child: _prefActionBtn(_btnSave, _agreeClr, _agreeTxt,
+                  () => _save('custom', _toggles['preferences']!, _toggles['statistics']!, _toggles['marketing']!)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  // ── Category row — .pref-cat-wrap: border:1px #e0e0e0, border-radius:5px ──
+  Widget _catRow(Map<String, String> cat) {
+    final key   = cat['key']!;
+    final label = cat['label']!;
+    final desc  = cat['desc']!;
+    final isNec = key == 'necessary';
+    final isOpen= _expanded.contains(key);
+    final togOn = isNec ? true : (_toggles[key] ?? false);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      decoration: BoxDecoration(border: Border.all(color: const Color(0xFFe0e0e0)), borderRadius: BorderRadius.circular(5)),
+      child: Column(children: [
+        // pref-cat-row: padding:4px 5px, justify-content:space-between
+        GestureDetector(
+          onTap: () => setState(() { isOpen ? _expanded.remove(key) : _expanded.add(key); }),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
             child: Row(children: [
-              Expanded(child: Text(_aboutCookies,
-                  style: TextStyle(fontSize: _fs + 2, fontWeight: FontWeight.bold, color: _titleColor))),
-              GestureDetector(onTap: widget.onDismiss,
-                  child: Icon(Icons.close, color: _bodyColor, size: 18)),
+              // pref-cat-left: gap:3px
+              // pref-cat-arrow: font-size:6px, rotates 90deg when open
+              AnimatedRotation(turns: isOpen ? 0.25 : 0, duration: const Duration(milliseconds: 200),
+                child: Text('▶', style: TextStyle(fontSize: _fs * 0.6, color: _agreeClr))),
+              const SizedBox(width: 3),
+              // pref-cat-name: font-size:6.5px, font-weight:600
+              Expanded(child: Text(label, style: TextStyle(fontSize: _fs * 0.85, fontWeight: FontWeight.w600, color: _bodyClr))),
+              // pref-always-active: font-size:6px, font-weight:600, color:agree_btn_color
+              if (isNec)
+                Text(_alwaysActive, style: TextStyle(fontSize: _fs * 0.75, fontWeight: FontWeight.w600, color: _agreeClr))
+              else
+                // pref-toggle: width:22px, height:12px
+                _toggle(togOn, key),
             ]),
           ),
-          // Scrollable body
-          Expanded(child: SingleChildScrollView(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(_body, style: TextStyle(fontSize: _fs - 1, color: _bodyColor, height: 1.5))),
-            const SizedBox(height: 10),
-            // Allow All
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _stkPrimary(_btnAgree, () => _save('agree', true, true, true))),
-            const SizedBox(height: 6),
-            // Disable All
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _stkDark(_btnDecline, () => _save('disagree', false, false, false))),
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            // Categories with accordion
-            _catRow('necessary',   _necTitle,  _necBody,  alwaysActive: true,  val: true,   onChange: (_) {}),
-            _catRow('preferences', _prefTitle, _prefBody, alwaysActive: false, val: _prefOn, onChange: (v) => setState(() => _prefOn = v)),
-            _catRow('statistics',  _statTitle, _statBody, alwaysActive: false, val: _statOn, onChange: (v) => setState(() => _statOn = v)),
-            _catRow('marketing',   _mktTitle,  _mktBody,  alwaysActive: false, val: _mktOn,  onChange: (v) => setState(() => _mktOn  = v)),
-            const SizedBox(height: 80),
-          ]))),
-          // Sticky Save my choices footer
+        ),
+        // pref-cat-body: padding:3px 7px 4px, font-size:5.5px, opacity:0.8, border-top:1px #f0f0f0, bg:rgba(0,0,0,0.02)
+        if (isOpen)
           Container(
-            decoration: BoxDecoration(color: _bgColor,
-                border: const Border(top: BorderSide(color: Color(0xFFe0e0e0)))),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: _stkPrimary(_btnSave, () => _save('custom', _prefOn, _statOn, _mktOn)),
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(7, 3, 7, 4),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFFf0f0f0))),
+              color: Color(0x05000000),
+            ),
+            child: Text(desc, style: TextStyle(fontSize: _fs * 0.7, height: 1.5, color: _bodyClr.withValues(alpha: 0.8))),
           ),
-        ]),
-      ),
+      ]),
     );
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Category accordion row
-  // ─────────────────────────────────────────────────────────
-  Widget _catRow(String key, String title, String desc,
-      {required bool alwaysActive, required bool val, required ValueChanged<bool> onChange}) {
-    final open = _expanded.contains(key);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      ListTile(
-        leading: GestureDetector(
-          onTap: () => setState(() { open ? _expanded.remove(key) : _expanded.add(key); }),
-          child: Icon(open ? Icons.expand_circle_down : Icons.chevron_right,
-              color: _agreeColor, size: 20),
+  // ── Toggle — .pref-toggle: width:22px, height:12px, border-radius:12px ──
+  // thumb: top:2px, left:2px, width:8px, height:8px
+  Widget _toggle(bool value, String key) {
+    return GestureDetector(
+      onTap: () => setState(() => _toggles[key] = !value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 36, height: 20,
+        decoration: BoxDecoration(
+          color: value ? _agreeClr : const Color(0xFFcccccc),
+          borderRadius: BorderRadius.circular(12),
         ),
-        title: Text(title, style: TextStyle(fontSize: _fs, fontWeight: FontWeight.w600, color: _bodyColor)),
-        trailing: alwaysActive
-            ? Text(_alwaysActive, style: TextStyle(fontSize: _fs - 2, fontWeight: FontWeight.w600, color: _agreeColor))
-            : Switch(value: val, onChanged: onChange, activeTrackColor: _agreeColor, activeThumbColor: Colors.white),
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-      ),
-      if (open)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(52, 0, 16, 8),
-          child: Text(desc, style: TextStyle(fontSize: _fs - 2, color: _bodyColor.withValues(alpha: 0.75))),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 200),
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 16, height: 16,
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+          ),
         ),
-      const Divider(height: 1, indent: 12),
-    ]);
+      ),
+    );
   }
 
   // ─────────────────────────────────────────────────────────
-  // Button builders — match frontend button shapes exactly
+  // Button builders — exact CSS match
   // ─────────────────────────────────────────────────────────
 
-  // stk-outline: transparent bg, border = preferences_text_color
-  Widget _stkOutline(String label, VoidCallback onTap) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _prefTextColor,
-        backgroundColor: Colors.transparent,
-        side: BorderSide(color: _prefTextColor, width: 1.5),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
-        minimumSize: const Size(double.infinity, 0),
+  // stk-outline: background:transparent, border:1.5px solid currentColor (body_text_color)
+  // padding:5px 8px, font-weight:700, line-height:1.4
+  Widget _stkOutline(String label, VoidCallback onTap) => _stk(
+    label: label, onTap: onTap,
+    bg: Colors.transparent, fg: _prefBorder,
+    border: BorderSide(color: _prefBorder, width: 1.5),
+  );
+
+  // stk-dark: background:#1a1a2e, color:#fff
+  Widget _stkDark(String label, VoidCallback onTap) => _stk(
+    label: label, onTap: onTap, bg: _decClr, fg: _decTxt,
+  );
+
+  // stk-primary: agreeStyle colors, stroke support
+  Widget _stkPrimary(String label, VoidCallback onTap) => _stk(
+    label: label, onTap: onTap,
+    bg: _isStroke ? Colors.transparent : _agreeClr,
+    fg: _isStroke ? _agreeClr : _agreeTxt,
+    border: _isStroke ? BorderSide(color: _agreeClr) : BorderSide.none,
+  );
+
+  // stk-btn base: padding:5px 8px, font-weight:700, width:100%, line-height:1.4
+  Widget _stk({required String label, required VoidCallback onTap,
+      required Color bg, required Color fg, BorderSide border = BorderSide.none}) {
+    return SizedBox(width: double.infinity,
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          backgroundColor: bg, foregroundColor: fg,
+          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+          shape: RoundedRectangleBorder(borderRadius: _btnR, side: border),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs, color: fg, height: 1.4),
+            textAlign: TextAlign.center),
       ),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs)),
     );
   }
 
-  // stk-dark: #1a1a2e bg, white text
-  Widget _stkDark(String label, VoidCallback onTap) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _declineColor,
-        foregroundColor: _declineText,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
-        elevation: 0,
-        minimumSize: const Size(double.infinity, 0),
-      ),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs)),
-    );
-  }
-
-  // stk-primary: agree_btn_color bg
-  Widget _stkPrimary(String label, VoidCallback onTap) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _isStroke ? Colors.transparent : _agreeColor,
-        foregroundColor: _isStroke ? _agreeColor : _agreeText,
-        side: _isStroke ? BorderSide(color: _agreeColor) : null,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
-        elevation: 0,
-        minimumSize: const Size(double.infinity, 0),
-      ),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs)),
-    );
-  }
-
-  // btn-item: equal-width side-by-side (bottom_sheet row 1)
+  // btn-item: flex:1, padding:4px, font-weight:600 (bottom_sheet row)
   Widget _btnItem(String label, Color bg, Color fg, VoidCallback onTap) {
-    return ElevatedButton(
+    return TextButton(
       onPressed: onTap,
-      style: ElevatedButton.styleFrom(
+      style: TextButton.styleFrom(
         backgroundColor: bg, foregroundColor: fg,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
-        elevation: 0,
+        padding: const EdgeInsets.all(4),
+        shape: RoundedRectangleBorder(borderRadius: _btnR),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs),
-          overflow: TextOverflow.ellipsis),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs, color: fg),
+          textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
     );
   }
 
-  // btn-pref-full: full-width outline (bottom_sheet row 2)
+  // btn-pref-full: padding:4px 6px, border:1px solid currentColor, font-weight:600
   Widget _prefFullBtn(String label, VoidCallback onTap) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _prefTextColor,
-        backgroundColor: Colors.transparent,
-        side: BorderSide(color: _prefTextColor),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: _btnRadius),
-        minimumSize: const Size(double.infinity, 0),
+    return SizedBox(width: double.infinity,
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          backgroundColor: Colors.transparent, foregroundColor: _prefBorder,
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+          shape: RoundedRectangleBorder(borderRadius: _btnR, side: BorderSide(color: _prefBorder)),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs, color: _prefBorder),
+            textAlign: TextAlign.center),
       ),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs)),
+    );
+  }
+
+  // pref-allow-btn / pref-disable-btn / pref-save-btn: padding:4px 6px (allow/disable), 5px 6px (save), font-weight:700, border-radius:4px
+  Widget _prefActionBtn(String label, Color bg, Color fg, VoidCallback onTap) {
+    return SizedBox(width: double.infinity,
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          backgroundColor: bg, foregroundColor: fg,
+          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs, color: fg),
+            textAlign: TextAlign.center),
+      ),
     );
   }
 
