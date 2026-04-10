@@ -1,9 +1,16 @@
+## 1.0.7
+- Banner now uses ALL values from dashboard: colors, font_size, button_type, layout, mobile_template
+- Language text from mobile_dialogue_languages table (title, body, btn labels, category titles/bodies)
+- Supports popup, bottom_sheet, dialog display styles
+- Supports default, rounded, flat layouts
+- Supports default, rounded, flat, stroke button types
+- Category descriptions from DB language fields
+
 ## 1.0.6
-- Add lastPayload getter to access fetched banner config
-- Fix: Show Banner Manually now uses real dashboard config
+- Add lastPayload getter
 
 ## 1.0.5
-- Add appId for app identity verification
+- App identity verification via appId
 
 ## 1.0.4
 - Auto-show banner via navigatorKey
