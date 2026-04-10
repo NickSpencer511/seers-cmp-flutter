@@ -83,7 +83,11 @@ class SeersCMP {
 
   static String? _settingsId;
   static Map<String, dynamic>? _config;
+  static SeersBannerPayload? _lastPayload;
   static final _catMap = {3: 'statistics', 4: 'marketing', 5: 'preferences', 6: 'unclassified'};
+
+  /// Last banner payload fetched from CDN — use this to show banner manually.
+  static SeersBannerPayload? get lastPayload => _lastPayload;
 
   static Function(SeersBannerPayload)? _onShowBanner;
   static Function(SeersConsent, SeersConsentMap)? _onConsent;
@@ -132,6 +136,9 @@ class SeersCMP {
       regulation: region?['regulation'],
       sdkKey:     settingsId,
     );
+
+    // Store payload so it can be accessed via SeersCMP.lastPayload
+    _lastPayload = payload;
 
     // Fire custom callback if provided
     _onShowBanner?.call(payload);
