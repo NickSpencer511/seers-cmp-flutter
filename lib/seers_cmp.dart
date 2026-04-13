@@ -178,6 +178,60 @@ class SeersCMP {
   ///   if (!blocked) { await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true); }
   static bool shouldBlock(String identifier) => _checkBlock(identifier)['blocked'] == true;
 
+  /// Returns the regulation type for the current session.
+  /// Values: 'gdpr' | 'ccpa' | 'none'
+  static String get regulation => _lastPayload?.regulation ?? 'gdpr';
+
+  /// GDPR (region_selection 1 or 3): pre-block everything until user accepts.
+  /// CCPA (region_selection 2): nothing pre-blocked; block only after explicit reject.
+  /// none (region_selection 0): never block.
+  static bool get isGdpr  => regulation == 'gdpr';
+  static bool get isCcpa  => regulation == 'ccpa';
+  static bool get isNone  => regulation == 'none';
+
+  /// Call this BEFORE initialising any third-party SDK.
+  /// Returns true if the SDK should be blocked right now.
+  ///
+  /// GDPR  → blocked until consent given (pre-block)
+  /// CCPA  → NOT blocked until user explicitly opts out
+  /// none  → never blocked
+  ///
+  /// Example:
+  ///   if (!SeersCMP.shouldBlockNow('com.google.firebase.analytics')) {
+  ///     await Firebase.initializeApp();
+  ///   }
+  static Future<bool> shouldBlockNow(String identifier) async {
+    final stored = await getConsent();
+
+    // No regulation or region_selection=0 → never block
+    if (isNone) return false;
+
+    // Consent already given — check per-category
+    if (stored != null && !_isExpired(stored)) {
+      return _checkBlockWithConsent(identifier, stored);
+    }
+
+    // No consent yet:
+    // GDPR → pre-block everything in the block list
+    if (isGdpr) return _checkBlock(identifier)['blocked'] == true;
+
+    // CCPA → don't pre-block (opt-out model)
+    return false;
+  }
+
+  /// Check block status using stored consent categories.
+  static bool _checkBlockWithConsent(String identifier, SeersConsent consent) {
+    final result = _checkBlock(identifier);
+    if (result['blocked'] != true) return false;
+    final cat = result['category'] as String?;
+    switch (cat) {
+      case 'statistics':  return !consent.statistics;
+      case 'marketing':   return !consent.marketing;
+      case 'preferences': return !consent.preferences;
+      default:            return false;
+    }
+  }
+
   /// Get full consent map.
   static SeersConsentMap getConsentMap() => _buildConsentMap();
 
@@ -209,7 +263,12 @@ class SeersCMP {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('SeersConsent_$_settingsId', jsonEncode(consent.toJson()));
     _logConsent(_settingsId!, consent);
-    final map = getConsentMap();
+    final map = SeersConsentMap(
+      statistics:   SeersCategory(allowed: statistics,  sdks: _buildBlockList(_config ?? {}).statistics),
+      marketing:    SeersCategory(allowed: marketing,   sdks: _buildBlockList(_config ?? {}).marketing),
+      preferences:  SeersCategory(allowed: preferences, sdks: _buildBlockList(_config ?? {}).preferences),
+      unclassified: SeersCategory(allowed: false,        sdks: _buildBlockList(_config ?? {}).unclassified),
+    );
     _onConsent?.call(consent, map);
   }
 
@@ -315,8 +374,28 @@ class SeersCMP {
     );
   }
 
+  /// Builds consent map with actual allowed values from stored consent.
+  static Future<SeersConsentMap> buildConsentMapWithConsent() async {
+    final list    = _buildBlockList(_config ?? {});
+    final consent = await getConsent();
+    return SeersConsentMap(
+      statistics:   SeersCategory(allowed: consent?.statistics  ?? false, sdks: list.statistics),
+      marketing:    SeersCategory(allowed: consent?.marketing   ?? false, sdks: list.marketing),
+      preferences:  SeersCategory(allowed: consent?.preferences ?? false, sdks: list.preferences),
+      unclassified: SeersCategory(allowed: false,                          sdks: list.unclassified),
+    );
+  }
+
   static bool _shouldShow(dynamic dialogue, Map<String, dynamic>? region) {
     if (dialogue == null) return false;
+
+    // region_selection=0 → never show banner
+    final regionSelection = dialogue['region_selection'];
+    final selectionInt = regionSelection is int
+        ? regionSelection
+        : int.tryParse(regionSelection?.toString() ?? '') ?? 1;
+    if (selectionInt == 0) return false;
+
     if (dialogue['region_detection'] == true || dialogue['region_detection'] == 1) {
       return region?['eligible'] == true && region?['regulation'] != 'none';
     }
@@ -351,20 +430,30 @@ class SeersCMP {
         Uri.parse('$host/api/mobile/sdk/save-consent'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'sdk_key':    sdkKey,
-          'platform':   _config?['platform'] ?? 'flutter',
-          'consent':    consent.value,
-          'categories': {
+          'sdk_key':     sdkKey,
+          'platform':    _config?['platform'] ?? 'flutter',
+          'consent':     consent.value,
+          'categories':  {
             'necessary':   consent.necessary,
             'preferences': consent.preferences,
             'statistics':  consent.statistics,
             'marketing':   consent.marketing,
           },
-          'timestamp': consent.timestamp,
+          'timestamp':   consent.timestamp,
+          'app_version': appVersion,   // set via SeersCMP.appVersion = '1.0.0'
+          'email':       userEmail,    // set via SeersCMP.userEmail = 'user@example.com'
         }),
       );
     } catch (_) {}
   }
+
+  /// Optional: set app version for consent log enrichment.
+  ///   SeersCMP.appVersion = '2.1.0';
+  static String? appVersion;
+
+  /// Optional: set user email for consent log enrichment.
+  ///   SeersCMP.userEmail = 'user@example.com';
+  static String? userEmail;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -405,7 +494,6 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
   Color get _decClr   => _c(_b?['disagree_btn_color']     ?? '#1a1a2e');
   Color get _decTxt   => _c(_b?['disagree_text_color']    ?? '#ffffff');
   // prefFullStyle uses body_text_color for both color and border
-  Color get _prefClr  => _bodyClr;
 
   // ── Font size from banner.font_size ──
   // Preview uses font_size directly (6-8px in 190px frame)

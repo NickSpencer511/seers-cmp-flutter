@@ -1,4 +1,12 @@
-## 1.0.8
+## 1.1.3
+- GDPR pre-block: all trackers blocked until user accepts
+- CCPA opt-out model: trackers not pre-blocked, blocked only on reject
+- region_selection=0: banner never shown, no blocking
+- Add shouldBlockNow() for regulation-aware blocking
+- Fix onConsent callback: correct allowed values per category
+- Add appVersion and userEmail fields for consent log enrichment
+- buildConsentMapWithConsent() returns accurate allowed state
+
 - Exact match to frontend banner layouts (popup, bottom_sheet, dialog)
 - Bottom sheet: title + body + Decline|Accept row + Preferences full-width
 - Popup/Dialog: body + outline + dark + primary stacked buttons
