@@ -1,4 +1,6 @@
-## 1.1.3
+## 1.1.4
+- Fix button order in popup and dialog: Allow All → Decline → Manage Preferences
+
 - GDPR pre-block: all trackers blocked until user accepts
 - CCPA opt-out model: trackers not pre-blocked, blocked only on reject
 - region_selection=0: banner never shown, no blocking

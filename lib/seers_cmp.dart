@@ -586,10 +586,10 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
         // banner-body: margin: 0 0 7px, line-height: 1.5, opacity: 0.9
         Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.9), height: 1.5)),
         const SizedBox(height: 7),
-        _stkOutline(_btnPref, () => setState(() => _showPref = true)),
+        _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
         const SizedBox(height: 5),
         if (_allowReject) ...[_stkDark(_btnDecline, () => _save('disagree', false, false, false)), const SizedBox(height: 5)],
-        _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
+        _stkOutline(_btnPref, () => setState(() => _showPref = true)),
         if (_poweredBy) ...[const SizedBox(height: 3),
           Text('Powered by Seers', textAlign: TextAlign.center, style: TextStyle(fontSize: _fs * 0.7, color: const Color(0xFFaaaaaa)))],
       ]),
@@ -649,10 +649,10 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
         const SizedBox(height: 4),
         Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.9), height: 1.5)),
         const SizedBox(height: 8),
-        _stkOutline(_btnPref, () => setState(() => _showPref = true)),
+        _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
         const SizedBox(height: 5),
         if (_allowReject) ...[_stkDark(_btnDecline, () => _save('disagree', false, false, false)), const SizedBox(height: 5)],
-        _stkPrimary(_btnAgree, () => _save('agree', true, true, true)),
+        _stkOutline(_btnPref, () => setState(() => _showPref = true)),
       ]),
     );
   }
