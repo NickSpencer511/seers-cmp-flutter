@@ -496,10 +496,12 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
   // prefFullStyle uses body_text_color for both color and border
 
   // ── Font size from banner.font_size ──
-  // Preview uses font_size directly (6-8px in 190px frame)
-  // Real app: use font_size as-is (user sets it in dashboard, e.g. 14)
-  double get _fs      => double.tryParse(_b?['font_size']?.toString() ?? '14') ?? 14;
-  double get _titleFs => _fs + 2; // titleStyle: font_size + 2
+  // Font sizes — all derived from dashboard font_size, matching Vue exactly
+  double get _fs        => double.tryParse(_b?['font_size']?.toString() ?? '14') ?? 14;
+  double get _titleFs   => _fs + 2;  // headings (title, pref title) = fs + 2
+  double get _catNameFs => _fs + 1;  // category names = fs + 1
+  double get _catBodyFs => _fs - 1;  // category description = fs - 1
+  double get _arrowFs   => _fs * 0.75; // accordion arrow = fs * 0.75
 
   // ── Button shape from button_type ──
   String get _btnType => (_b?['button_type'] ?? 'default').toString();
@@ -581,7 +583,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
     return Container(
       decoration: BoxDecoration(color: _bg, borderRadius: _radius(),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.14), blurRadius: 24, offset: const Offset(0, -4))]),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      padding: const EdgeInsets.all(12),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // banner-body: margin: 0 0 7px, line-height: 1.5, opacity: 0.9
         Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.9), height: 1.5)),
@@ -607,7 +609,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
     return Container(
       decoration: BoxDecoration(color: _bg, borderRadius: _radius(),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 12, offset: const Offset(0, -2))]),
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+      padding: const EdgeInsets.all(12),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // sheet-handle: width:32px, height:4px, background:#ccc, border-radius:2px, margin:0 auto 6px
         if (_handle) Center(child: Container(width: 32, height: 4, margin: const EdgeInsets.only(bottom: 6),
@@ -673,7 +675,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
           child: Column(children: [
             // pref-scroll
             Expanded(child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+              padding: const EdgeInsets.all(12),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 // pref-close: font-size:10px, align-self:flex-end
                 Align(alignment: Alignment.centerRight,
@@ -684,16 +686,15 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
                 Text(_aboutCookies, style: TextStyle(fontSize: _titleFs, fontWeight: FontWeight.w700, color: _titleClr, height: 1.3)),
                 const SizedBox(height: 4),
                 // pref-body: font-size:6px, opacity:0.85, line-height:1.4
-                Text(_body, style: TextStyle(fontSize: _fs - 1, color: _bodyClr.withValues(alpha: 0.85), height: 1.4)),
+                Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.85), height: 1.4)),
                 const SizedBox(height: 4),
-                // pref-policy-link: font-size:6px, font-weight:600, underline, color:agree_btn_color
-                Text('Read Cookie Policy ↗', style: TextStyle(fontSize: _fs - 2, fontWeight: FontWeight.w600,
+                // pref-policy-link: font-size: fs, font-weight:600, underline
+                Text('Read Cookie Policy ↗', style: TextStyle(fontSize: _fs, fontWeight: FontWeight.w600,
                     color: _agreeClr, decoration: TextDecoration.underline, decorationColor: _agreeClr)),
                 const SizedBox(height: 6),
                 // pref-allow-btn: padding:4px 6px, font-weight:700, border-radius:4px, font-size:7px
                 _prefActionBtn(_btnAgree, _agreeClr, _agreeTxt, () => _save('agree', true, true, true)),
                 const SizedBox(height: 4),
-                // pref-disable-btn: background:#1a1a2e, color:#fff
                 _prefActionBtn(_btnDecline, const Color(0xFF1a1a2e), Colors.white, () => _save('disagree', false, false, false)),
                 const SizedBox(height: 8),
                 // pref-categories: gap:3px, border-top:1px solid #e0e0e0, padding-top:4px
@@ -709,10 +710,10 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
               decoration: BoxDecoration(color: _bg,
                 border: const Border(top: BorderSide(color: Color(0xFFe0e0e0))),
                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, -2))]),
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+              padding: const EdgeInsets.all(12),
               // pref-save-btn: padding:5px 6px, font-weight:700, border-radius:4px
               child: _prefActionBtn(_btnSave, _agreeClr, _agreeTxt,
-                  () => _save('custom', _toggles['preferences']!, _toggles['statistics']!, _toggles['marketing']!)),
+                  () => _save('custom', _toggles['preferences']!, _toggles['statistics']!, _toggles['marketing']!), isSave: true),
             ),
           ]),
         ),
@@ -742,13 +743,13 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
               // pref-cat-left: gap:3px
               // pref-cat-arrow: font-size:6px, rotates 90deg when open
               AnimatedRotation(turns: isOpen ? 0.25 : 0, duration: const Duration(milliseconds: 200),
-                child: Text('▶', style: TextStyle(fontSize: _fs * 0.6, color: _agreeClr))),
+                child: Text('▶', style: TextStyle(fontSize: _arrowFs, color: _agreeClr))),
               const SizedBox(width: 3),
-              // pref-cat-name: font-size:6.5px, font-weight:600
-              Expanded(child: Text(label, style: TextStyle(fontSize: _fs * 0.85, fontWeight: FontWeight.w600, color: _bodyClr))),
-              // pref-always-active: font-size:6px, font-weight:600, color:agree_btn_color
+              // pref-cat-name: font-size: fs+1, font-weight:600
+              Expanded(child: Text(label, style: TextStyle(fontSize: _catNameFs, fontWeight: FontWeight.w600, color: _bodyClr))), // catNameFs = fs+1
+              // pref-always-active: font-size: fs, font-weight:600
               if (isNec)
-                Text(_alwaysActive, style: TextStyle(fontSize: _fs * 0.75, fontWeight: FontWeight.w600, color: _agreeClr))
+                Text(_alwaysActive, style: TextStyle(fontSize: _fs, fontWeight: FontWeight.w600, color: _agreeClr))
               else
                 // pref-toggle: width:22px, height:12px
                 _toggle(togOn, key),
@@ -764,7 +765,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
               border: Border(top: BorderSide(color: Color(0xFFf0f0f0))),
               color: Color(0x05000000),
             ),
-            child: Text(desc, style: TextStyle(fontSize: _fs * 0.7, height: 1.5, color: _bodyClr.withValues(alpha: 0.8))),
+            child: Text(desc, style: TextStyle(fontSize: _catBodyFs, height: 1.5, color: _bodyClr.withValues(alpha: 0.8))),
           ),
       ]),
     );
@@ -805,6 +806,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
     label: label, onTap: onTap,
     bg: Colors.transparent, fg: _prefBorder,
     border: BorderSide(color: _prefBorder, width: 1.5),
+    isLast: true,
   );
 
   // stk-dark: background:#1a1a2e, color:#fff
@@ -820,20 +822,23 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
     border: _isStroke ? BorderSide(color: _agreeClr) : BorderSide.none,
   );
 
-  // stk-btn base: padding:5px 8px, font-weight:700, width:100%, line-height:1.4
+  // stk-btn: padding:5px 8px, mb:5px (except last), fw:700, lh:1.4
   Widget _stk({required String label, required VoidCallback onTap,
-      required Color bg, required Color fg, BorderSide border = BorderSide.none}) {
-    return SizedBox(width: double.infinity,
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          backgroundColor: bg, foregroundColor: fg,
-          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-          shape: RoundedRectangleBorder(borderRadius: _btnR, side: border),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      required Color bg, required Color fg, BorderSide border = BorderSide.none, bool isLast = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 5),
+      child: SizedBox(width: double.infinity,
+        child: TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            backgroundColor: bg, foregroundColor: fg,
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+            shape: RoundedRectangleBorder(borderRadius: _btnR, side: border),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs, color: fg, height: 1.4),
+              textAlign: TextAlign.center),
         ),
-        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs, color: fg, height: 1.4),
-            textAlign: TextAlign.center),
       ),
     );
   }
@@ -853,31 +858,35 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
     );
   }
 
-  // btn-pref-full: padding:4px 6px, border:1px solid currentColor, font-weight:600
+  // btn-pref-full: padding:4px 6px, margin-bottom:3px, border:1px solid, font-weight:600
   Widget _prefFullBtn(String label, VoidCallback onTap) {
-    return SizedBox(width: double.infinity,
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          backgroundColor: Colors.transparent, foregroundColor: _prefBorder,
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
-          shape: RoundedRectangleBorder(borderRadius: _btnR, side: BorderSide(color: _prefBorder)),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: SizedBox(width: double.infinity,
+        child: TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            backgroundColor: Colors.transparent, foregroundColor: _prefBorder,
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+            shape: RoundedRectangleBorder(borderRadius: _btnR, side: BorderSide(color: _prefBorder)),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs, color: _prefBorder),
+              textAlign: TextAlign.center),
         ),
-        child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: _fs, color: _prefBorder),
-            textAlign: TextAlign.center),
       ),
     );
   }
 
-  // pref-allow-btn / pref-disable-btn / pref-save-btn: padding:4px 6px (allow/disable), 5px 6px (save), font-weight:700, border-radius:4px
-  Widget _prefActionBtn(String label, Color bg, Color fg, VoidCallback onTap) {
+  // pref-allow-btn/pref-disable-btn: padding:4px 6px, font-weight:700, border-radius:4px
+  // pref-save-btn: padding:5px 6px, font-weight:700, border-radius:4px
+  Widget _prefActionBtn(String label, Color bg, Color fg, VoidCallback onTap, {bool isSave = false}) {
     return SizedBox(width: double.infinity,
       child: TextButton(
         onPressed: onTap,
         style: TextButton.styleFrom(
           backgroundColor: bg, foregroundColor: fg,
-          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+          padding: EdgeInsets.symmetric(vertical: isSave ? 5 : 4, horizontal: 6),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
