@@ -1,3 +1,4 @@
+## 2.0.2\n- Latest banner updates
 ## 2.0.0
 - Complete redesign: pixel-perfect match to frontend MobileDefaultBanner
 - All colors, font sizes, paddings, border radii exactly mirror the Vue preview
