@@ -490,12 +490,7 @@ class SeersCMP {
       );
     }
     _logConsent(_settingsId!, consent);
-    final map = SeersConsentMap(
-      statistics:   SeersCategory(allowed: statistics,  sdks: _buildBlockList(_config ?? {}).statistics),
-      marketing:    SeersCategory(allowed: marketing,   sdks: _buildBlockList(_config ?? {}).marketing),
-      preferences:  SeersCategory(allowed: preferences, sdks: _buildBlockList(_config ?? {}).preferences),
-      unclassified: SeersCategory(allowed: false,        sdks: _buildBlockList(_config ?? {}).unclassified),
-    );
+    final map = _buildConsentMap(consent);
     _onConsent?.call(consent, map);
   }
 
@@ -598,13 +593,13 @@ class SeersCMP {
     return {'blocked': false, 'category': null};
   }
 
-  static SeersConsentMap _buildConsentMap() {
+  static SeersConsentMap _buildConsentMap([SeersConsent? consent]) {
     final list = _buildBlockList(_config ?? {});
     return SeersConsentMap(
-      statistics:   SeersCategory(allowed: false, sdks: list.statistics),
-      marketing:    SeersCategory(allowed: false, sdks: list.marketing),
-      preferences:  SeersCategory(allowed: false, sdks: list.preferences),
-      unclassified: SeersCategory(allowed: false, sdks: list.unclassified),
+      statistics:   SeersCategory(allowed: consent?.statistics  ?? false, sdks: list.statistics),
+      marketing:    SeersCategory(allowed: consent?.marketing   ?? false, sdks: list.marketing),
+      preferences:  SeersCategory(allowed: consent?.preferences ?? false, sdks: list.preferences),
+      unclassified: SeersCategory(allowed: false,                          sdks: list.unclassified),
     );
   }
 
