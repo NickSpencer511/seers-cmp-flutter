@@ -1,3 +1,6 @@
+## 2.0.3
+- Fixed CDN URL from cdn.consents.dev to cdn.seersco.com
+- Fixed regionSelection string/int type mismatch from API
 ## 2.0.2\n- Latest banner updates
 ## 2.0.0
 - Complete redesign: pixel-perfect match to frontend MobileDefaultBanner

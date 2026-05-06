@@ -18,6 +18,7 @@ const List<String> _seersAllowedHosts = [
   'seers.ai',
   'seersco.com',
   'cdn.consents.dev',
+  'cdn.seersco.com',
 ];
 
 bool _isAllowedHost(String urlString) {
@@ -503,7 +504,7 @@ class SeersCMP {
 
   static Future<Map<String, dynamic>?> _fetchConfig(String sdkKey) async {
     final ts = DateTime.now().millisecondsSinceEpoch ~/ 60000;
-    final url = 'https://cdn.consents.dev/mobile/configs/$sdkKey.json?v=$ts';
+    final url = 'https://cdn.seersco.com/mobile/configs/$sdkKey.json?v=$ts';
     try {
       final r = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       if (r.statusCode == 404) return {'eligible': false, 'message': 'App not found'};
