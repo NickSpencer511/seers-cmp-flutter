@@ -10,7 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Seers CMP registered ID (IAB TCF)
 const int _seersCmpId      = 158;
 const int _seersCmpVersion = 1;
-// Google Consent Mode v2 developer ID
+// Google Consent Mode v2 developer ID (reserved for future use)
+// ignore: unused_element
 const String _seersGoogleDevId = 'dNmU0M2';
 // Allowlist of trusted Seers hosts — prevents SSRF
 const List<String> _seersAllowedHosts = [
@@ -1460,18 +1461,6 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
   // ─────────────────────────────────────────────────────────
   // Button builders — exact CSS match
   // ─────────────────────────────────────────────────────────
-
-  Widget _logo() {
-    final logoHeight = max(_p * 1.8, 24.0);
-    return Center(
-      child: Image.network(
-        _logoSrc,
-        height: logoHeight,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-      ),
-    );
-  }
 
   Widget _prefLogo() {
     if (!_showLogo) return const SizedBox.shrink();
