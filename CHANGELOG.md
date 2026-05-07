@@ -1,3 +1,7 @@
+## 2.0.5
+- Banner layout and preference center fixes
+- Consistent font sizes across all display styles
+
 ## 2.0.4
 - Font size clamped to 10–16px range matching dashboard dropdown
 - Preference panel: 92% height sheet with rounded top corners
