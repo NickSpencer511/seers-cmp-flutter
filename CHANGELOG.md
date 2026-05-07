@@ -1,3 +1,10 @@
+## 2.0.4
+- Font size clamped to 10–16px range matching dashboard dropdown
+- Preference panel: 92% height sheet with rounded top corners
+- prefFs = max(fs, 12) for readable preference center text
+- Typeface support: arial/inter/spezia → sans-serif, serif, monospace, cursive
+- padScale fixed to 1.0 for CSS-like spacing consistency
+
 ## 2.0.3
 - Fixed CDN URL from cdn.consents.dev to cdn.seersco.com
 - Fixed regionSelection string/int type mismatch from API

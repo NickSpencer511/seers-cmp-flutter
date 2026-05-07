@@ -832,15 +832,23 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
   // prefFullStyle uses body_text_color for both color and border
 
   // ── Font size from banner.font_size ──
-  // Scale factor: maps Vue's 190px preview frame to real screen width.
-  // e.g. 360dp phone → scale≈1.89, capped at 2.0
-  double get _scale    => (MediaQuery.of(context).size.width / 190.0).clamp(1.0, 2.0);
-  double get _fs        => (double.tryParse(_b?['font_size']?.toString() ?? '14') ?? 14) * _scale;
-  double get _titleFs   => _fs + 2 * _scale;
-  double get _catNameFs => _fs + 1 * _scale;
-  double get _catBodyFs => _fs - 1 * _scale;
-  double get _arrowFs   => _fs * 0.75;
+  // Keep mobile output aligned with the Vue preview instead of scaling it up.
+  double get _scale    => 1.0;
+  double get _fs        => (double.tryParse(_b?['font_size']?.toString() ?? '12') ?? 12).clamp(10, 16).toDouble();
+  double get _titleFs   => _fs + 2;
+  double get _catBodyFs => _fs - 1;
   double get _p         => 12 * _scale;  // base padding
+  double get _prefFs        => max(_fs, 12.0);
+  double get _prefTitleFs   => _prefFs + 2;
+  double get _prefCatNameFs => _prefFs + 1;
+  double get _prefCatBodyFs => _prefFs - 1;
+  double get _prefArrowFs   => max(_prefFs * 0.75, 9.0);
+  String? get _fontFamily {
+    final value = (_b?['font_style'] ?? '').toString().trim().toLowerCase();
+    if (value.isEmpty || value == 'none' || value == 'inherit') return null;
+    if (value == 'arial' || value == 'inter' || value == 'spezia') return 'Arial';
+    return value;
+  }
 
   // ── Button shape from button_type ──
   String get _btnType => (_b?['button_type'] ?? 'default').toString();
@@ -1020,14 +1028,14 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_showPref) return _prefPanel();
-    if (_dpsView)   return _dpsPanel();
-    if (_badgeVisible && _hasBadge) return _badgeOverlay();
+    if (_showPref) return _withBannerFont(_prefPanel());
+    if (_dpsView)   return _withBannerFont(_dpsPanel());
+    if (_badgeVisible && _hasBadge) return _withBannerFont(_badgeOverlay());
     if (!_bannerVisible) return const SizedBox.shrink();
     if (_tmpl == 'dialog') {
-      return Material(color: Colors.transparent, child: Center(child: _dialogBanner()));
+      return _withBannerFont(Material(color: Colors.transparent, child: Center(child: _dialogBanner())));
     }
-    return Material(
+    return _withBannerFont(Material(
       color: Colors.transparent,
       child: Align(
         alignment: _tmpl == 'bottom_sheet' && _pos == 'top'
@@ -1035,6 +1043,14 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
             : Alignment.bottomCenter,
         child: _tmpl == 'bottom_sheet' ? _bottomSheet() : _popup(),
       ),
+    ));
+  }
+
+  Widget _withBannerFont(Widget child) {
+    if (_fontFamily == null) return child;
+    return DefaultTextStyle.merge(
+      style: TextStyle(fontFamily: _fontFamily),
+      child: child,
     );
   }
 
@@ -1134,8 +1150,12 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
       color: Colors.transparent,
       child: Container(
         width: double.infinity,
-        height: double.infinity,
-        color: _bg,
+        height: MediaQuery.of(context).size.height * 0.92,
+        decoration: BoxDecoration(
+          color: _bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 28, offset: const Offset(0, -8))],
+        ),
         child: Column(children: [
             // pref-scroll
             Expanded(child: SingleChildScrollView(
@@ -1147,21 +1167,21 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
                     Expanded(child: _prefLogo()),
                     GestureDetector(
                       onTap: () => setState(() => _showPref = false),
-                      child: Text('✕', style: TextStyle(fontSize: _fs, color: _titleClr, fontWeight: FontWeight.w700)),
+                      child: Text('✕', style: TextStyle(fontSize: _prefFs, color: _titleClr, fontWeight: FontWeight.w700)),
                     ),
                   ],
                 ),
                 SizedBox(height: _p * 0.17),
-                Text(_aboutCookies, style: TextStyle(fontSize: _titleFs, fontWeight: FontWeight.w700, color: _titleClr, height: 1.3)),
+                Text(_aboutCookies, style: TextStyle(fontSize: _prefTitleFs, fontWeight: FontWeight.w700, color: _titleClr, height: 1.3)),
                 SizedBox(height: _p * 0.33),
-                Text(_body, style: TextStyle(fontSize: _fs, color: _bodyClr.withValues(alpha: 0.85), height: 1.4)),
+                Text(_body, style: TextStyle(fontSize: _prefFs, color: _bodyClr.withValues(alpha: 0.85), height: 1.45)),
                 SizedBox(height: _p * 0.33),
-                Text('Read Cookie Policy ↗', style: TextStyle(fontSize: _fs, fontWeight: FontWeight.w600,
+                Text('Read Cookie Policy ↗', style: TextStyle(fontSize: _prefFs, fontWeight: FontWeight.w600,
                     color: _agreeClr, decoration: TextDecoration.underline, decorationColor: _agreeClr)),
                 SizedBox(height: _p * 0.5),
-                _prefActionBtn(_btnAgree, _agreeClr, _agreeTxt, () => _save('agree', true, true, true)),
+                _prefActionBtn(_btnAgree, _agreeClr, _agreeTxt, () => _save('agree', true, true, true), fontSize: _prefFs),
                 SizedBox(height: _p * 0.33),
-                _prefActionBtn(_btnDecline, const Color(0xFF1a1a2e), Colors.white, () => _save('disagree', false, false, false)),
+                _prefActionBtn(_btnDecline, const Color(0xFF1a1a2e), Colors.white, () => _save('disagree', false, false, false), fontSize: _prefFs),
                 SizedBox(height: _p * 0.67),
                 Container(
                   decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFe0e0e0)))),
@@ -1176,8 +1196,8 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, -2))]),
               padding: EdgeInsets.fromLTRB(_p, _p, _p, _p + MediaQuery.of(context).padding.bottom),
               // pref-save-btn: padding:5px 6px, font-weight:700, border-radius:4px
-              child: _prefActionBtn(_btnSave, _agreeClr, _agreeTxt,
-                  () => _save('custom', _toggles['preferences']!, _toggles['statistics']!, _toggles['marketing']!), isSave: true),
+                  child: _prefActionBtn(_btnSave, _agreeClr, _agreeTxt,
+                  () => _save('custom', _toggles['preferences']!, _toggles['statistics']!, _toggles['marketing']!), isSave: true, fontSize: _prefFs),
             ),
           ]),
       ),
@@ -1354,14 +1374,14 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
           child: GestureDetector(
             onTap: () => setState(() { isOpen ? _expanded.remove(key) : _expanded.add(key); }),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: _p * 0.42, vertical: _p * 0.33),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Row(children: [
                 AnimatedRotation(turns: isOpen ? 0.25 : 0, duration: const Duration(milliseconds: 200),
-                  child: Text('▶', style: TextStyle(fontSize: _arrowFs, color: _agreeClr))),
-                const SizedBox(width: 3),
-                Expanded(child: Text(label, style: TextStyle(fontSize: _catNameFs, fontWeight: FontWeight.w600, color: _bodyClr))),
+                  child: Text('▶', style: TextStyle(fontSize: _prefArrowFs, color: _agreeClr))),
+                const SizedBox(width: 6),
+                Expanded(child: Text(label, style: TextStyle(fontSize: _prefCatNameFs, fontWeight: FontWeight.w600, color: _bodyClr))),
                 if (isNec)
-                  Text(_alwaysActive, style: TextStyle(fontSize: _fs, fontWeight: FontWeight.w600, color: _agreeClr))
+                  Text(_alwaysActive, style: TextStyle(fontSize: _prefCatBodyFs, fontWeight: FontWeight.w600, color: _agreeClr))
                 else
                   _toggle(togOn, key),
               ]),
@@ -1371,7 +1391,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
         if (isOpen)
           Container(
             width: double.infinity,
-            padding: EdgeInsets.fromLTRB(_p * 0.58, _p * 0.25, _p * 0.58, _p * 0.33),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: Color(0xFFf0f0f0))),
               color: Color(0x05000000),
@@ -1379,7 +1399,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(desc, style: TextStyle(fontSize: _catBodyFs, height: 1.5, color: _bodyClr.withValues(alpha: 0.8))),
+                Text(desc, style: TextStyle(fontSize: _prefCatBodyFs, height: 1.5, color: _bodyClr.withValues(alpha: 0.8))),
                 // "Cookie Details" link — same as default.js seers-cmp-cookie-policy-detail-btn
                 // Only show if this category has DPS entries
                 if (_getDpsForCat(key).isNotEmpty) ...[  
@@ -1393,7 +1413,7 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
                     child: Text(
                       _l?['cookie_details'] ?? 'Cookie Details',
                       style: TextStyle(
-                        fontSize: _catBodyFs,
+                        fontSize: _prefCatBodyFs,
                         color: _agreeClr,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
@@ -1574,17 +1594,18 @@ class _SeersBannerWidgetState extends State<SeersBannerWidget> {
     );
   }
 
-  Widget _prefActionBtn(String label, Color bg, Color fg, VoidCallback onTap, {bool isSave = false}) {
+  Widget _prefActionBtn(String label, Color bg, Color fg, VoidCallback onTap, {bool isSave = false, double? fontSize}) {
     return SizedBox(width: double.infinity,
       child: TextButton(
         onPressed: onTap,
         style: TextButton.styleFrom(
           backgroundColor: bg, foregroundColor: fg,
-          padding: EdgeInsets.symmetric(vertical: isSave ? _p * 0.42 : _p * 0.33, horizontal: _p * 0.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_p * 0.33)),
+          minimumSize: Size.fromHeight(isSave ? 38 : 36),
+          padding: EdgeInsets.symmetric(vertical: isSave ? 7 : 6, horizontal: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
-        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: _fs, color: fg),
+        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: fontSize ?? _fs, color: fg),
             textAlign: TextAlign.center),
       ),
     );
